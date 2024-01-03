@@ -15,7 +15,7 @@ from networks.matchboxnet import MFCC_MatchboxNet
 
 def select_optimizer(opt_name, lr, model, sched_name="cos"):
     if opt_name == "adam":
-        opt = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-6)
+        opt = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-6) # 1e-6
     elif opt_name == "radam":
         opt = torch_optimizer.RAdam(model.parameters(), lr=lr, weight_decay=0.00001)
     elif opt_name == "sgd":
@@ -59,11 +59,11 @@ def select_model(model_name, total_class_num=None):
         model = MFCC_TCResnet(bins=40, channels=config[model_name], channel_scale=1,
                               num_classes=total_class_num)
     elif model_name == "bcresnet":
-        model = MFCC_BCResnet(bins=40, channel_scale=1, num_classes=30)
+        model = MFCC_BCResnet(bins=40, channel_scale=1, num_classes=4)
     elif model_name == "bcresnet8":
-        model = MFCC_BCResnet(bins=40, channel_scale=8, num_classes=30)
+        model = MFCC_BCResnet(bins=40, channel_scale=8, num_classes=4)
     elif model_name == "matchboxnet":
-        model = MFCC_MatchboxNet(bins=64, B=3, R=2, n_channels=64, num_classes=30)
+        model = MFCC_MatchboxNet(bins=64, B=3, R=2, n_channels=64, num_classes=4)
     else:
         model = None
 

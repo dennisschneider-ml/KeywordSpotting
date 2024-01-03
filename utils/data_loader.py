@@ -33,11 +33,12 @@ class SpeechCommandDataset(Dataset):
     def combined_path(self):
         dataset_list = []
         for path in self.filename:
-            category, wave_name = path.split("/")
+
+            rest_path, category, wave_name = path.rsplit("/", 2)
             if category in self.classes and category == "_silence_":
                 dataset_list.append(["silence", "silence"])
             elif category in self.classes:
-                path = os.path.join(self.root, category, wave_name)
+                path = os.path.join(rest_path, category, wave_name)
                 dataset_list.append([path, category])
         return dataset_list
 
@@ -71,4 +72,6 @@ class SpeechCommandDataset(Dataset):
         else:
             waveform = self.load_audio(speech_path)
 
+        # Convert waveform to mono.
+        waveform = waveform.mean(0, keepdim=True)
         return waveform, label

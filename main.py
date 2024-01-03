@@ -37,9 +37,7 @@ if __name__ == "__main__":
     """
     Data 
     """
-    class_list = ["yes", "no", "nine", "three", "bed", "up", "down", "wow", "happy", "four",
-                  "stop", "go", "dog", "cat", "five", "tree", "one", "eight", "left", "right",
-                  "bird", "seven", "six", "two", "marvin", "on", "sheila", "off", "house", "zero"]
+    class_list = ["clipper", "irrigator", "pe", "scissors"]
     class_encoding = {category: index for index, category in enumerate(class_list)}
 
     """

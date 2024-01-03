@@ -11,6 +11,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from utils.data_loader import *
 from utils.utils import *
+import pathlib
 
 logger = logging.getLogger()
 
@@ -21,8 +22,11 @@ def get_dataloader_keyword(data_path, class_list, class_encoding, batch_size=1):
     To get the GSC data and build the data loader from a list of keywords.
     """
     if len(class_list) != 0:
-        train_filename = readlines(f"{data_path}/train.txt")
-        valid_filename = readlines(f"{data_path}/valid.txt")
+        data_root = pathlib.Path(data_path)
+        train_root = data_root / "train"
+        valid_root = data_root / "valid"
+        train_filename = [str(p.relative_to(train_root)) for p in train_root.rglob("./*/*.wav")]
+        valid_filename = [str(p.relative_to(valid_root)) for p in valid_root.rglob("./*/*.wav")]
         train_dataset = SpeechCommandDataset(f"{data_path}/data", train_filename, True, class_list, class_encoding)
         valid_dataset = SpeechCommandDataset(f"{data_path}/data", valid_filename, False, class_list, class_encoding)
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
