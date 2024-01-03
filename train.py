@@ -87,7 +87,7 @@ class Trainer:
         train_length, valid_length = len(train_dataloader), len(valid_dataloader)
         logger.info(f"[3] Training for {self.epoch} epochs...")
         lowest_loss = 0.8
-        res = ""
+        best_run = {}
         for self.epo in range(self.epoch):
             self.loss_name.update({key: 0 for key in self.loss_name})
             self.model.cuda(self.device)
@@ -112,7 +112,7 @@ class Trainer:
                 self.loss_name["train_accuracy"] = self.loss_name["train_correct"] / self.loss_name["train_total"]
 
             self.model.eval()
-            for batch_idx, (waveform, labels) in enumerate(valid_dataloader):
+            for waveform, labels in valid_dataloader:
                 with torch.no_grad():
                     waveform, labels = waveform.to(self.device), labels.to(self.device)
                     logits = self.model(waveform)
@@ -131,15 +131,7 @@ class Trainer:
                 f"lr {optimizer.param_groups[0]['lr']:.4f}")
             if self.loss_name["valid_loss"] < lowest_loss:
                 lowest_loss = self.loss_name["valid_loss"]
-                res = str(f"Epoch {self.epo + 1}/{self.epoch} | train_loss {self.loss_name['train_loss']:.4f} "
-                    f"| train_acc {100 * self.loss_name['train_accuracy']:.4f} | "
-                    f"test_loss {self.loss_name['valid_loss']:.4f} "
-                    f"| test_acc {100 * self.loss_name['valid_accuracy']:.4f} | "
-                    f"lr {optimizer.param_groups[0]['lr']:.4f}")
+                best_run = self.loss_name
                 self.model_save()
             scheduler.step()
-        print()
-        print("Best model performance:")
-        print(res)
-        print()
-        return self.loss_name
+        return best_run
