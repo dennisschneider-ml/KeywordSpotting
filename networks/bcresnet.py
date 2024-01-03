@@ -191,9 +191,10 @@ class MFCC_BCResnet(nn.Module):
         self.mfcc_layer = MFCC(sample_rate=self.sampling_rate, n_mfcc=self.bins, log_mels=True)
         self.bc_resnet = BCResNet(num_classes, channel_scale)
 
+
     def forward(self, waveform):
-        mel_sepctogram = self.mfcc_layer(waveform)
-        logits = self.bc_resnet(mel_sepctogram)
+        mel_spectogram = self.mfcc_layer(waveform)
+        logits = self.bc_resnet(mel_spectogram)
         return logits
 
 
