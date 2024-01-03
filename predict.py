@@ -27,7 +27,7 @@ def initialize_model(model_name, model_load_path, n_classes, device, **kwargs):
     return model
 
 
-def initialize_dataloaders(data_path, class_encoding, batch_size, **kwargs):
+def initialize_dataloaders(class_encoding, batch_size, data_path, **kwargs):
     train_dl, val_dl = train.get_dataloader_keyword(data_path, class_list, class_encoding, batch_size, return_data_path=True)
     return train_dl, val_dl
 
@@ -61,7 +61,6 @@ def process_data(dataloader, dataloader_name):
             data_names
         )
         save_embeddings(embeddings, data_paths)
-        exit()
 
 
 from argparse import ArgumentParser
@@ -80,10 +79,11 @@ if __name__ == "__main__":
     class_list = ["clipper", "irrigator", "pe", "scissors"]
     class_encoding = {category: index for index, category in enumerate(class_list)}
 
-    train_dl, val_dl = initialize_dataloaders(**vars(args), class_encoding)
+    train_dl, val_dl = initialize_dataloaders(class_encoding, **vars(args))
     model = initialize_model(**vars(args), n_classes=len(class_list))
 
     output_dir = Path(args.output)
 
     process_data(train_dl, "train")
+    process_data(val_dl, "test")
 
