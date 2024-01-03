@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 
 
 class SpeechCommandDataset(Dataset):
-    def __init__(self, root, filename, is_training, class_list, class_encoding):
+    def __init__(self, root, filename, is_training, class_list, class_encoding, return_data_path=False):
         super(SpeechCommandDataset, self).__init__()
         """
         Args:
@@ -29,6 +29,7 @@ class SpeechCommandDataset(Dataset):
         self.is_training = is_training
         self.class_encoding = class_encoding
         self.speech_dataset = self.combined_path()
+        self.return_data_path = return_data_path
 
     def combined_path(self):
         dataset_list = []
@@ -74,4 +75,7 @@ class SpeechCommandDataset(Dataset):
 
         # Convert waveform to mono.
         waveform = waveform.mean(0, keepdim=True)
-        return waveform, label
+        if self.return_data_path:
+            return waveform, label, speech_path
+        else:
+            return waveform, label

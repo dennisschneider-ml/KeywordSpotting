@@ -16,7 +16,7 @@ import pathlib
 logger = logging.getLogger()
 
 
-def get_dataloader_keyword(data_path, class_list, class_encoding, batch_size=1):
+def get_dataloader_keyword(data_path, class_list, class_encoding, batch_size=1, return_data_path=False):
     """
     CL task protocol: keyword split.
     To get the GSC data and build the data loader from a list of keywords.
@@ -27,8 +27,8 @@ def get_dataloader_keyword(data_path, class_list, class_encoding, batch_size=1):
         valid_root = data_root / "valid"
         train_filename = [str(p.relative_to(train_root)) for p in train_root.rglob("./*/*.wav")]
         valid_filename = [str(p.relative_to(valid_root)) for p in valid_root.rglob("./*/*.wav")]
-        train_dataset = SpeechCommandDataset(f"{data_path}/data", train_filename, True, class_list, class_encoding)
-        valid_dataset = SpeechCommandDataset(f"{data_path}/data", valid_filename, False, class_list, class_encoding)
+        train_dataset = SpeechCommandDataset(f"{data_path}/data", train_filename, True, class_list, class_encoding, return_data_path)
+        valid_dataset = SpeechCommandDataset(f"{data_path}/data", valid_filename, False, class_list, class_encoding, return_data_path)
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
         valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
         return train_dataloader, valid_dataloader
