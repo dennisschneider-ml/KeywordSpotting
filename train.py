@@ -16,6 +16,19 @@ import pathlib
 logger = logging.getLogger()
 
 
+def collate_fn(batch):
+    if len(batch[0]) == 3:
+        wavelengths, labels, data_paths = zip(*batch)
+    else:
+        wavelengths, labels = zip(*batch)
+    max_len = max([w.shape[1] for w in wavelengths])
+    norm_wavelengths = [torch.nn.functional.pad(sample, (0, max_len - sample.shape[1])) for sample in wavelengths]
+    if len(batch[0]) == 3:
+        return torch.stack(norm_wavelengths), torch.stack([torch.tensor(label, requires_grad=False) for label in labels]), data_paths
+    else:
+        return torch.stack(norm_wavelengths), torch.stack([torch.tensor(label, requires_grad=False) for label in labels])
+
+
 def get_dataloader_keyword(data_path, class_list, class_encoding, batch_size=1, return_data_path=False):
     """
     CL task protocol: keyword split.
@@ -25,12 +38,12 @@ def get_dataloader_keyword(data_path, class_list, class_encoding, batch_size=1, 
         data_root = pathlib.Path(data_path)
         train_root = data_root / "train"
         valid_root = data_root / "valid"
-        train_filename = [str(p.relative_to(train_root)) for p in train_root.rglob("./*/*.wav")]
-        valid_filename = [str(p.relative_to(valid_root)) for p in valid_root.rglob("./*/*.wav")]
-        train_dataset = SpeechCommandDataset(f"{data_path}/data", train_filename, True, class_list, class_encoding, return_data_path)
-        valid_dataset = SpeechCommandDataset(f"{data_path}/data", valid_filename, False, class_list, class_encoding, return_data_path)
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
-        valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+        train_filename = [str(p) for p in train_root.rglob("./*/*.wav")]
+        valid_filename = [str(p) for p in valid_root.rglob("./*/*.wav")]
+        train_dataset = SpeechCommandDataset(train_root, train_filename, True, class_list, class_encoding, return_data_path)
+        valid_dataset = SpeechCommandDataset(valid_root, valid_filename, False, class_list, class_encoding, return_data_path)
+        train_dataloader = DataLoader(train_dataset, collate_fn=collate_fn, batch_size=batch_size, shuffle=True, drop_last=True)
+        valid_dataloader = DataLoader(valid_dataset, collate_fn=collate_fn, batch_size=batch_size, shuffle=True, drop_last=True)
         return train_dataloader, valid_dataloader
     else:
         raise ValueError("the class list is empty!")
@@ -65,12 +78,7 @@ class Trainer:
         save_directory = os.path.join("./model_save", self.opt.save)
         if not os.path.isdir(save_directory):
             os.makedirs(save_directory)
-
-        if (self.epo + 1) % self.opt.freq == 0:
-            torch.save(self.model.state_dict(), os.path.join(save_directory, "model" + str(self.epoch + 1) + ".pt"))
-
-        if (self.epo + 1) == self.epoch:
-            torch.save(self.model.state_dict(), os.path.join(save_directory, "last.pt"))
+        torch.save(self.model.state_dict(), os.path.join(save_directory, "best.pt"))
 
     def model_train(self, optimizer, scheduler, train_dataloader, valid_dataloader):
         """
@@ -78,6 +86,8 @@ class Trainer:
         """
         train_length, valid_length = len(train_dataloader), len(valid_dataloader)
         logger.info(f"[3] Training for {self.epoch} epochs...")
+        lowest_loss = 0.8
+        res = ""
         for self.epo in range(self.epoch):
             self.loss_name.update({key: 0 for key in self.loss_name})
             self.model.cuda(self.device)
@@ -89,7 +99,6 @@ class Trainer:
                 MFCC:(B,C,F,T)
                 labels:(B,)
                 """
-                # print((waveform.size,labels))
                 optimizer.zero_grad()
                 logits = self.model(waveform)
                 loss = self.criterion(logits, labels)
@@ -114,13 +123,23 @@ class Trainer:
                     self.loss_name["valid_total"] += labels.size(0)
                     self.loss_name["valid_correct"] += (predict == labels).sum().item()
                     self.loss_name["valid_accuracy"] = self.loss_name["valid_correct"] / self.loss_name["valid_total"]
-            scheduler.step()
-            self.model_save()
             logger.info(
                 f"Epoch {self.epo + 1}/{self.epoch} | train_loss {self.loss_name['train_loss']:.4f} "
                 f"| train_acc {100 * self.loss_name['train_accuracy']:.4f} | "
                 f"test_loss {self.loss_name['valid_loss']:.4f} "
                 f"| test_acc {100 * self.loss_name['valid_accuracy']:.4f} | "
-                f"lr {optimizer.param_groups[0]['lr']:.4f}"
-            )
+                f"lr {optimizer.param_groups[0]['lr']:.4f}")
+            if self.loss_name["valid_loss"] < lowest_loss:
+                lowest_loss = self.loss_name["valid_loss"]
+                res = str(f"Epoch {self.epo + 1}/{self.epoch} | train_loss {self.loss_name['train_loss']:.4f} "
+                    f"| train_acc {100 * self.loss_name['train_accuracy']:.4f} | "
+                    f"test_loss {self.loss_name['valid_loss']:.4f} "
+                    f"| test_acc {100 * self.loss_name['valid_accuracy']:.4f} | "
+                    f"lr {optimizer.param_groups[0]['lr']:.4f}")
+                self.model_save()
+            scheduler.step()
+        print()
+        print("Best model performance:")
+        print(res)
+        print()
         return self.loss_name
