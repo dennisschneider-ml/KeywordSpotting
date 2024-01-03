@@ -69,7 +69,11 @@ class Trainer:
             print(f">>>   Available GPU device: {self.device_list}")
             self.model = nn.DataParallel(self.model)
 
-        self.criterion = nn.CrossEntropyLoss()
+        beta_class_imbalance = 0.7625
+        classes = torch.tensor([54, 2, 8, 19], device=self.device)
+        weights = (1-beta_class_imbalance)/(1-beta_class_imbalance**classes)
+        weights = weights/weights.sum()
+        self.criterion = nn.CrossEntropyLoss(weight=weights)
         self.loss_name = {
             "train_loss": 0.0, "train_accuracy": 0.0, "train_total": 0, "train_correct": 0,
             "valid_loss": 0.0, "valid_accuracy": 0.0, "valid_total": 0, "valid_correct": 0}
@@ -86,7 +90,7 @@ class Trainer:
         """
         train_length, valid_length = len(train_dataloader), len(valid_dataloader)
         logger.info(f"[3] Training for {self.epoch} epochs...")
-        lowest_loss = 0.8
+        lowest_loss = 10000
         best_run = {}
         for self.epo in range(self.epoch):
             self.loss_name.update({key: 0 for key in self.loss_name})
